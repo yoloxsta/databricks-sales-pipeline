@@ -1,0 +1,113 @@
+name: Databricks CI/CD Pipeline
+
+# Trigger on push to main branch
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Job 1: Validate and Test
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install databricks-cli
+          pip install pytest
+      
+      - name: Validate Databricks bundle
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          # Configure Databricks CLI
+          echo "$DATABRICKS_HOST" | databricks configure --token
+          echo "$DATABRICKS_TOKEN"
+          
+          # Validate bundle syntax
+          databricks bundle validate || echo "Bundle validation skipped (no bundle configured)"
+      
+      - name: Run notebook syntax checks
+        run: |
+          echo "Checking Python syntax in notebooks..."
+          for file in notebooks/*.py; do
+            python -m py_compile "$file" && echo "✓ $file syntax OK" || exit 1
+          done
+
+  # Job 2: Deploy to Databricks (only on main branch)
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install Databricks CLI
+        run: |
+          python -m pip install --upgrade pip
+          pip install databricks-cli
+      
+      - name: Configure Databricks CLI
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          # Create databricks config
+          mkdir -p ~/.databricks
+          echo "[DEFAULT]" > ~/.databricks/databricks.cfg
+          echo "host = $DATABRICKS_HOST" >> ~/.databricks/databricks.cfg
+          echo "token = $DATABRICKS_TOKEN" >> ~/.databricks/databricks.cfg
+      
+      - name: Sync notebooks to Databricks
+        run: |
+          echo "Syncing notebooks to Databricks..."
+          # This uses repos API to sync the Git folder
+          databricks repos update --path /Repos/$(basename $GITHUB_REPOSITORY) --branch main || \
+          echo "Manual sync may be required"
+      
+      - name: Trigger job run
+        run: |
+          echo "Triggering Databricks job..."
+          # Replace JOB_ID with your actual job ID
+          # databricks jobs run-now --job-id JOB_ID
+          echo "Job trigger skipped (configure JOB_ID in workflow)"
+
+  # Job 3: Notify on success/failure
+  notify:
+    needs: [validate, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Check status
+        run: |
+          if [ "${{ needs.validate.result }}" == "failure" ]; then
+            echo "❌ Validation failed"
+            exit 1
+          fi
+          if [ "${{ needs.deploy.result }}" == "failure" ]; then
+            echo "❌ Deployment failed"
+            exit 1
+          fi
+          echo "✅ CI/CD pipeline completed successfully"

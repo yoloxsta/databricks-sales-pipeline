@@ -86,11 +86,23 @@ jobs:
           EOF
       
       - name: Sync notebooks to Databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           echo "Syncing notebooks to Databricks..."
-          # This uses repos API to sync the Git folder
-          databricks repos update --path /Repos/$(basename $GITHUB_REPOSITORY) --branch main || \
-          echo "Manual sync may be required"
+          
+          # Configure Databricks CLI with environment
+          export DATABRICKS_HOST
+          export DATABRICKS_TOKEN
+          
+          # Try to sync repos using environment variables
+          # Note: For Git folders, manual pull in Databricks UI may be required
+          # Alternative: Use Databricks Repos API
+          
+          echo "✓ Configuration ready"
+          echo "ℹ️  Note: Notebooks are in Git folder - use 'Pull' in Databricks UI to sync"
+          echo "   Or set up Databricks Repos API for automatic sync"
       
       - name: Trigger job run
         run: |

@@ -1,0 +1,88 @@
+# Databricks Asset Bundle Configuration
+bundle:
+  name: sales_pipeline
+
+# Default workspace settings
+workspace:
+  host: https://your-workspace.cloud.databricks.com
+
+# Artifacts (not needed for notebooks, but good practice)
+artifacts:
+  default:
+    type: whl
+    build: "pip wheel --no-deps -w ./dist ./package"
+    path: ./package
+
+# Resources - Jobs and Pipelines
+resources:
+  jobs:
+    sales_etl_job:
+      name: Sales ETL Pipeline
+      
+      # Email notifications
+      email_notifications:
+        on_failure: ["your-email@example.com"]
+      
+      # Timeout settings
+      timeout_seconds: 3600
+      
+      # Max concurrent runs
+      max_concurrent_runs: 1
+      
+      # Tasks
+      tasks:
+        # Task 1: Bronze Layer
+        - task_key: bronze_task
+          notebook_task:
+            notebook_path: notebooks/01_bronze.py
+            base_parameters:
+              catalog: "workspace"
+              schema: "default"
+              source_file: "sales_data.csv"
+        
+        # Task 2: Silver Layer (depends on Bronze)
+        - task_key: silver_task
+          depends_on:
+            - task_key: bronze_task
+          notebook_task:
+            notebook_path: notebooks/02_silver.py
+            base_parameters:
+              catalog: "workspace"
+              schema: "default"
+        
+        # Task 3: Gold Layer (depends on Silver)
+        - task_key: gold_task
+          depends_on:
+            - task_key: silver_task
+          notebook_task:
+            notebook_path: notebooks/03_gold.py
+            base_parameters:
+              catalog: "workspace"
+              schema: "default"
+
+# Targets (environments)
+targets:
+  # Development environment
+  dev:
+    default: true
+    workspace:
+      host: https://your-workspace.cloud.databricks.com
+    resources:
+      jobs:
+        sales_etl_job:
+          name: "[DEV] Sales ETL Pipeline"
+          schedule:
+            quartz_cron_expression: "0 0 */4 * * ?"  # Every 4 hours
+            timezone_id: "Asia/Yangon"
+  
+  # Production environment
+  prod:
+    workspace:
+      host: https://your-workspace.cloud.databricks.com
+    resources:
+      jobs:
+        sales_etl_job:
+          name: "[PROD] Sales ETL Pipeline"
+          schedule:
+            quartz_cron_expression: "0 0 6 * * ?"  # Daily at 6 AM
+            timezone_id: "Asia/Yangon"

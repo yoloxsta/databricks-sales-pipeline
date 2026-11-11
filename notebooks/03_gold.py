@@ -54,7 +54,7 @@ gold_daily_df = (
     .orderBy("sale_date")
 )
 
-gold_daily_df.write.mode("overwrite").saveAsTable(gold_daily)
+gold_daily_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(gold_daily)
 print(f"✓ Daily sales table: {gold_daily}")
 print(f"  Records: {gold_daily_df.count():,}")
 
@@ -82,7 +82,7 @@ gold_category_df = (
     .orderBy(F.col("total_revenue").desc())
 )
 
-gold_category_df.write.mode("overwrite").saveAsTable(gold_category)
+gold_category_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(gold_category)
 print(f"✓ Category performance table: {gold_category}")
 print(f"  Categories: {gold_category_df.count()}")
 
@@ -103,7 +103,7 @@ gold_city_df = (
     .orderBy(F.col("total_revenue").desc())
 )
 
-gold_city_df.write.mode("overwrite").saveAsTable(gold_city)
+gold_city_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(gold_city)
 print(f"✓ City sales table: {gold_city}")
 print(f"  Cities: {gold_city_df.count()}")
 

@@ -80,7 +80,8 @@ print(f"✓ Records removed: {initial_count - final_count:,}")
 
 # DBTITLE 1 - Write to Silver table
 print("\n💾 Writing to Silver table...")
-silver_df.write.mode("overwrite").saveAsTable(target_table)
+# Use overwriteSchema to handle schema changes
+silver_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(target_table)
 
 # DBTITLE 1 - Validation
 print("\n✅ Validation:")

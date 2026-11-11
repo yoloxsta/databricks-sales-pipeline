@@ -104,12 +104,35 @@ jobs:
           echo "ℹ️  Note: Notebooks are in Git folder - use 'Pull' in Databricks UI to sync"
           echo "   Or set up Databricks Repos API for automatic sync"
       
-      - name: Trigger job run
+      - name: Trigger Databricks job run
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          DATABRICKS_JOB_ID: ${{ secrets.DATABRICKS_JOB_ID }}
         run: |
-          echo "Triggering Databricks job..."
-          # Replace JOB_ID with your actual job ID
-          # databricks jobs run-now --job-id JOB_ID
-          echo "Job trigger skipped (configure JOB_ID in workflow)"
+          echo "🚀 Triggering Databricks job..."
+          
+          # Configure CLI with environment
+          export DATABRICKS_HOST
+          export DATABRICKS_TOKEN
+          
+          # Method 1: Use job ID from secrets (recommended)
+          if [ -n "$DATABRICKS_JOB_ID" ]; then
+            echo "Using job ID from secrets: $DATABRICKS_JOB_ID"
+            databricks jobs run-now --job-id "$DATABRICKS_JOB_ID" && echo "✅ Job triggered successfully!" || echo "❌ Job trigger failed"
+          else
+            echo "⚠️  DATABRICKS_JOB_ID secret not configured"
+            echo ""
+            echo "To enable automatic job triggering:"
+            echo "1. Go to Databricks → Workflows → Jobs"
+            echo "2. Find your 'Sales ETL Pipeline' job"
+            echo "3. Copy the Job ID from the URL or job details"
+            echo "4. Add it as GitHub secret: DATABRICKS_JOB_ID"
+            echo ""
+            echo "For now, you can manually:"
+            echo "- Pull latest code in Databricks Git folder"
+            echo "- Run the job manually in Workflows → Jobs"
+          fi
 
   # Job 3: Notify on success/failure
   notify:

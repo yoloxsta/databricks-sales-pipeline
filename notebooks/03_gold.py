@@ -73,13 +73,13 @@ gold_category_df = (
         F.countDistinct("product_name").alias("unique_products"),
         F.countDistinct("city").alias("cities_sold")
     )
-    .withColumn("revenue_percentage",
-        F.round(
-            (F.col("total_revenue") / gold_category_df.agg(F.sum("total_revenue")).collect()[0][0]) * 100,
-            2
-        )
-    )
     .orderBy(F.col("total_revenue").desc())
+)
+
+# Calculate revenue percentage separately
+total_revenue_all = gold_category_df.agg(F.sum("total_revenue")).collect()[0][0]
+gold_category_df = gold_category_df.withColumn("revenue_percentage",
+    F.round((F.col("total_revenue") / total_revenue_all) * 100, 2)
 )
 
 gold_category_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(gold_category)

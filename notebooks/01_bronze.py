@@ -46,7 +46,8 @@ bronze_df = (
 
 # DBTITLE 1 - Write to Bronze table
 print("\n💾 Writing to Bronze table...")
-bronze_df.write.mode("overwrite").saveAsTable(target_table)
+# Use overwriteSchema to handle schema changes
+bronze_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(target_table)
 
 # DBTITLE 1 - Validation
 print("\n✅ Validation:")
